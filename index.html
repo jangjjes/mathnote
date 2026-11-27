@@ -771,7 +771,7 @@ function setLang(l){ try{ localStorage.setItem('mn2-lang', l); }catch(_){} try{ 
 
 {
 const $ = id => document.getElementById(id);
-const APP_VER = '10.10';
+const APP_VER = '10.11';
 // 답 보기(빠른정답 파란 답)는 10.10부터 메뉴에서 뺌 → 해설 보기만 (다시 쓰려면 true로)
 const ansApp = () => false;
 window.MN_VER = APP_VER; window.mnInNote = () => !!note;   // 아이패드 자동 업데이트가 읽음 (아래 서비스워커 부분)
@@ -1371,6 +1371,10 @@ function layout(){
   renderAll();
 }
 window.addEventListener('resize', layout);
+{ let lw0 = 0, lh0 = 0; const relayout = () => { const w = $('wrap').clientWidth, h = $('wrap').clientHeight; if(w && h && (Math.abs(w - lw0) > 1 || Math.abs(h - lh0) > 1)){ lw0 = w; lh0 = h; layout(); } else inkRect = null; };
+  if(window.ResizeObserver) new ResizeObserver(relayout).observe($('wrap'));
+  if(window.visualViewport) visualViewport.addEventListener('resize', () => { inkRect = null; });
+  window.addEventListener('orientationchange', () => setTimeout(layout, 300)); }
 
 // 입체 도형: 꼭짓점(-1~1 상자 안)과 보이는 모서리 / 가려진 모서리(점선)
 const SOLIDS = {
@@ -2886,6 +2890,14 @@ $('redo').onclick = () => { closeFlys(); if(!stepHistory(redoStack, undoStack)) 
 
 /* ----- 입력 (S펜 · 손가락) ----- */
 function pos(e){ const r = inkRect || (inkRect = inkC.getBoundingClientRect()); return [(e.clientX-r.left)/scale, (e.clientY-r.top)/scale]; }
+// 펜의 촘촘한 점(coalesced): 아이패드 사파리는 이 점들의 위치가 실제 펜 위치와 어긋나게 올 때가 있음
+// → 마지막 점을 실제 펜 위치(e)에 맞춰 전체를 같이 옮김 (안 어긋나면 그대로)
+function evPts(e){
+  let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; if(!evs || !evs.length) return [e];
+  const L = evs[evs.length - 1], dx = e.clientX - L.clientX, dy = e.clientY - L.clientY;
+  if(Math.abs(dx) < 2 && Math.abs(dy) < 2) return evs;
+  return evs.map(v => ({clientX: v.clientX + dx, clientY: v.clientY + dy, pressure: v.pressure}));
+}
 window.addEventListener('pointerdown', () => { inkRect = null; }, true);
 window.addEventListener('scroll', () => { inkRect = null; }, true);
 function hitShape(x,y,linesOnly){
@@ -3074,8 +3086,8 @@ $('wrap').addEventListener('pointermove', e => {
   if(lasso){ const [x,y] = pos(e); if(selRect){ const [x0,y0] = lasso[0]; lasso.length = 1; lasso.push([x,y0],[x,y],[x0,y],[x0,y0]); } else lasso.push([x,y]); frame('live', () => { if(lasso) drawLasso(); }); return; }
   if(drag && drag.k === 'paint'){ const [x,y] = pos(e); paintAt(x, y); return; }
   if(drag && drag.k === 'cap'){ const [x,y] = pos(e); drag.x1 = x; drag.y1 = y; frame('live', capDraw); return; }
-  if(drag && drag.k === 'aerase'){ let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; if(!evs.length) evs = [e]; for(const ev of evs){ const [x,y] = pos(ev); aeraseTo(x, y); } return; }
-  if(drag && drag.k === 'serase'){ let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; if(!evs.length) evs = [e];
+  if(drag && drag.k === 'aerase'){ const evs = evPts(e); for(const ev of evs){ const [x,y] = pos(ev); aeraseTo(x, y); } return; }
+  if(drag && drag.k === 'serase'){ const evs = evPts(e);
     for(const ev of evs){ const [x,y] = pos(ev); if(drag.sl && Math.hypot(x-drag.sl[0], y-drag.sl[1]) < 4/scale) continue; drag.sl = [x, y]; strokeEraseAt(x, y); }
     { const [x,y] = pos(e); frame('live', () => { if(drag && drag.k === 'serase') erasePreview(x, y); }); } return; }
   if(drag && drag.k === 'lend'){ const [x,y] = pos(e); lineEndTo(drag, x, y); return; }
@@ -3118,7 +3130,7 @@ $('wrap').addEventListener('pointermove', e => {
     requestRender(true, false); return; }
   if(stroke){
     if(stroke.k !== 'e' && forceErase){   /* 선을 긋는 도중에는 S펜 버튼을 눌러도 지우개로 바뀌지 않음 */ const [x,y] = pos(e); renderInk(); stroke = null; drag = eraserMode === 'stroke' ? {k:'serase', n:0} : {k:'aerase', n:0, last:[x,y]}; return; }
-    let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; if(!evs.length) evs = [e];
+    const evs = evPts(e);
     if(stroke.done) return;   // 도형으로 바뀐 뒤에는 그대로
     if(stroke.line){   // 이미 직선이 된 뒤에는 끝점만 따라감
       const [x,y] = pos(e); stroke.p[1] = snapAngle(stroke.p[0], [x, y, stroke.p[1][2]]); renderInk(); return;
