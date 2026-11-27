@@ -771,7 +771,7 @@ function setLang(l){ try{ localStorage.setItem('mn2-lang', l); }catch(_){} try{ 
 
 {
 const $ = id => document.getElementById(id);
-const APP_VER = '10.11';
+const APP_VER = '10.12';
 // 답 보기(빠른정답 파란 답)는 10.10부터 메뉴에서 뺌 → 해설 보기만 (다시 쓰려면 true로)
 const ansApp = () => false;
 window.MN_VER = APP_VER; window.mnInNote = () => !!note;   // 아이패드 자동 업데이트가 읽음 (아래 서비스워커 부분)
@@ -1371,7 +1371,8 @@ function layout(){
   renderAll();
 }
 window.addEventListener('resize', layout);
-{ let lw0 = 0, lh0 = 0; const relayout = () => { const w = $('wrap').clientWidth, h = $('wrap').clientHeight; if(w && h && (Math.abs(w - lw0) > 1 || Math.abs(h - lh0) > 1)){ lw0 = w; lh0 = h; layout(); } else inkRect = null; };
+{ let lw0 = 0, lh0 = 0; const relayout = () => { if(stroke || drag || activeId !== null){ setTimeout(relayout, 300); return; }   // 쓰는 도중에는 다시 맞추지 않음 (펜을 뗀 뒤에)
+  const w = $('wrap').clientWidth, h = $('wrap').clientHeight; if(w && h && (Math.abs(w - lw0) > 1 || Math.abs(h - lh0) > 1)){ lw0 = w; lh0 = h; layout(); } else inkRect = null; };
   if(window.ResizeObserver) new ResizeObserver(relayout).observe($('wrap'));
   if(window.visualViewport) visualViewport.addEventListener('resize', () => { inkRect = null; });
   window.addEventListener('orientationchange', () => setTimeout(layout, 300)); }
@@ -2893,6 +2894,7 @@ function pos(e){ const r = inkRect || (inkRect = inkC.getBoundingClientRect()); 
 // 펜의 촘촘한 점(coalesced): 아이패드 사파리는 이 점들의 위치가 실제 펜 위치와 어긋나게 올 때가 있음
 // → 마지막 점을 실제 펜 위치(e)에 맞춰 전체를 같이 옮김 (안 어긋나면 그대로)
 function evPts(e){
+  if(IOS) return [e];   // 아이패드: 촘촘한 점의 시점이 들쭉날쭉해서 선이 끊김 → 실제 펜 위치만 (사파리는 화면 주사율로 충분히 자주 보냄)
   let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; if(!evs || !evs.length) return [e];
   const L = evs[evs.length - 1], dx = e.clientX - L.clientX, dy = e.clientY - L.clientY;
   if(Math.abs(dx) < 2 && Math.abs(dy) < 2) return evs;
