@@ -771,7 +771,7 @@ function setLang(l){ try{ localStorage.setItem('mn2-lang', l); }catch(_){} try{ 
 
 {
 const $ = id => document.getElementById(id);
-const APP_VER = '10.12';
+const APP_VER = '10.13';
 // 답 보기(빠른정답 파란 답)는 10.10부터 메뉴에서 뺌 → 해설 보기만 (다시 쓰려면 true로)
 const ansApp = () => false;
 window.MN_VER = APP_VER; window.mnInNote = () => !!note;   // 아이패드 자동 업데이트가 읽음 (아래 서비스워커 부분)
@@ -3149,6 +3149,10 @@ let barrelOn = true;
 try{ if(localStorage.getItem('mn2-barrel2') === '0') barrelOn = false; }catch(_){}
 const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 if(IOS) barrelOn = false;   // 아이패드(애플펜슬)에는 S펜 버튼이 없음 → 버튼 감지용 장치를 끔
+// 아이패드 사파리: 펜을 잠깐 멈추거나 빨리 움직이면 '꾹 누르기·글자 선택' 등으로 보고 획을 취소(pointercancel)해 버림 → 선이 끊김
+// 그림 영역의 터치는 사파리가 가져가지 못하게 막음 (펜 신호는 그대로 옴, 위에 뜬 버튼·입력칸은 제외)
+if(IOS){ const keep = e => { if(e.target.closest && e.target.closest('#selBar,#pasteBub,button,input,select,textarea,a')) return; if(e.cancelable) e.preventDefault(); };
+  ['touchstart', 'touchmove'].forEach(t => $('wrap').addEventListener(t, keep, {passive: false})); }
 document.addEventListener('gesturestart', e => e.preventDefault(), {passive: false});   // 아이패드 사파리: 두 손가락 확대 막기
 const SB = $('sbridge');
 let sbBuilt = '', bStroke = null, bEndT = null;
