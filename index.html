@@ -771,9 +771,9 @@ function setLang(l){ try{ localStorage.setItem('mn2-lang', l); }catch(_){} try{ 
 
 {
 const $ = id => document.getElementById(id);
-const APP_VER = '10.09';
-// 답 보기(빠른정답)는 안드로이드 앱에서만 (아이패드·브라우저에서는 버튼을 숨기고 해설 보기만)
-const ansApp = () => !!(window.MNOcr || window.Capacitor);
+const APP_VER = '10.10';
+// 답 보기(빠른정답 파란 답)는 10.10부터 메뉴에서 뺌 → 해설 보기만 (다시 쓰려면 true로)
+const ansApp = () => false;
 window.MN_VER = APP_VER; window.mnInNote = () => !!note;   // 아이패드 자동 업데이트가 읽음 (아래 서비스워커 부분)
 const uid6 = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 const COVERS = ['#2f5d8a','#3f7d5c','#a3473f','#6b4f9a','#b07a2a','#2f6f73','#4b5563','#8a3d6b'];
