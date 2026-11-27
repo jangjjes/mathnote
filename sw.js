@@ -1,5 +1,5 @@
 // 수학노트 오프라인용 (아이패드 홈 화면 앱)
-const CACHE = 'mathnote-v1';
+const CACHE = 'mathnote-v2';
 const CORE = ['./', './index.html'];
 const CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
@@ -21,9 +21,11 @@ self.addEventListener('fetch', e => {
   if(req.method !== 'GET') return;
   const url = new URL(req.url);
   if(url.origin === location.origin){
-    e.respondWith(fetch(req).then(r => { if(r.ok){ const cp = r.clone(); caches.open(CACHE).then(c => c.put(req, cp)); } return r; })
+    // 노트 앱 파일: 인터넷 되면 새 버전, 안 되면 저장해 둔 것
+    e.respondWith(fetch(req, {cache: 'no-cache'}).then(r => { if(r.ok){ const cp = r.clone(); caches.open(CACHE).then(c => c.put(req, cp)); } return r; })
       .catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
   } else if(url.hostname === 'cdnjs.cloudflare.com'){
+    // PDF 도구: 한 번 받은 건 저장해 두고 오프라인에서도 사용
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => { const cp = r.clone(); caches.open(CACHE).then(c => c.put(req, cp)); return r; })));
   }
 });

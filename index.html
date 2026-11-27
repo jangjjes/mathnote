@@ -561,6 +561,28 @@ button{touch-action:manipulation}   /* 빠르게 두 번 눌러도 확대 동작
 #tPenType span{font-size:10.5px;font-weight:700;letter-spacing:-.3px;color:#3a3a3c;white-space:nowrap}
 #selBar #selAbs.on,#selBar #selEven.on,#selBar #selYx.on{background:var(--acc);color:#fff;box-shadow:0 2px 8px rgba(249,115,22,.35)}   /* 켜져 있으면 주황색 */
 </style>
+<script>
+// 아이패드 홈 화면 앱: 오프라인 사용 + 새 버전 자동 반영 (안드로이드 앱·Claude 미리보기에서는 동작 안 함)
+if('serviceWorker' in navigator && location.protocol === 'https:' && !window.Capacitor && location.hostname !== 'localhost' && !/claude|anthropic/.test(location.hostname)){
+  let mnReg = null;
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').then(r => { mnReg = r; }).catch(() => {}));
+  const mnCheck = async () => {
+    try{
+      if(mnReg) mnReg.update().catch(() => {});
+      const t = await (await fetch('./index.html', {cache: 'no-store'})).text();
+      const m = t.match(/APP_VER = '([0-9.]+)'/);
+      if(!m || typeof APP_VER === 'undefined' || m[1] === APP_VER) return;
+      if(sessionStorage.getItem('mn-upd') === m[1]) return;   // 같은 버전으로 한 번만 시도
+      if(typeof note !== 'undefined' && note) return;          // 필기 중이면 서재로 돌아왔을 때 다시 확인
+      sessionStorage.setItem('mn-upd', m[1]);
+      location.reload();
+    }catch(e){}
+  };
+  window.addEventListener('load', () => setTimeout(mnCheck, 1500));
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') setTimeout(mnCheck, 500); });
+  setInterval(() => { if(document.visibilityState === 'visible') mnCheck(); }, 60000);
+}
+</script>
 </head>
 <body>
 
